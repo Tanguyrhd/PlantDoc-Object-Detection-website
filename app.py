@@ -4,30 +4,30 @@ from PIL import Image
 import io
 import base64
 
-# Configuration de la page
+# Page config
 st.set_page_config(
-    page_title="PlantDoc - Détection de Maladies",
+    page_title="Recognize and detect plant diseases",
     page_icon="🌿",
     layout="wide"
 )
 
-# URL de l'API
+# API URL
 API_URL = "https://plantdoc-api-645106012666.europe-west1.run.app"
 
-# Titre principal
-st.title("🌿 PlantDoc - Détection de Maladies des Plantes")
+# Title
+st.title("🌿 Recognize and Detect Plant Diseases")
 st.markdown("""
-Cette application permet de :
-- 🔍 **Détecter** si une plante est saine ou malade
-- 🌱 **Identifier** l'espèce de la plante
-- 🦠 **Diagnostiquer** la maladie spécifique si présente
+This app automatically analyzes your plant image through three steps:
+1. 🌱 **Identify** the plant species
+2. 🔍 **Detect** if the plant is healthy or diseased
+3. 🦠 **Diagnose** the specific disease (if diseased)
 """)
 
-# Sidebar avec les informations sur les modèles
+# Sidebar with model info
 with st.sidebar:
-    st.header("📊 Informations sur les modèles")
+    st.header("📊 Model Information")
 
-    st.subheader("🌱 Espèces supportées (13)")
+    st.subheader("🌱 Supported Species (13)")
     species = [
         "Apple", "Bell Pepper", "Blueberry", "Cherry", "Corn",
         "Grape", "Peach", "Potato", "Raspberry", "Soybean",
@@ -35,7 +35,7 @@ with st.sidebar:
     ]
     st.markdown("- " + "\n- ".join(species))
 
-    st.subheader("🦠 Maladies détectées (27 classes)")
+    st.subheader("🦠 Detected Diseases (27 classes)")
     diseases = [
         "Apple rust leaf", "Apple Scab Leaf",
         "Bell pepper leaf spot",
@@ -50,128 +50,142 @@ with st.sidebar:
     ]
     st.markdown("- " + "\n- ".join(diseases))
 
-    st.info("💡 Le dataset contient 2,598 images annotées pour l'entraînement")
+    st.info("💡 The model has been trained on a dataset with 2,598 annotated images")
 
-# Interface principale
+# Main interface
 st.markdown("---")
 
-# Upload d'image
+# Upload
 uploaded_file = st.file_uploader(
-    "📤 Choisissez une image de feuille de plante",
+    "📤 Choose a plant leaf image",
     type=["jpg", "jpeg", "png"]
 )
 
 if uploaded_file is not None:
-    # Afficher l'image originale
+    # Display original image
     image = Image.open(uploaded_file)
 
-    col1, col2 = st.columns(2)
+    st.subheader("🖼️ Original Image")
+    st.image(image, use_container_width=True)
 
-    with col1:
-        st.subheader("🖼️ Image originale")
-        st.image(image, use_container_width=True)
-
-    # Choix du type de prédiction
     st.markdown("---")
-    st.subheader("🎯 Choisissez le type d'analyse")
 
-    col_btn1, col_btn2, col_btn3 = st.columns(3)
+    # Step 1: Species Identification
+    st.markdown("### Step 1: 🌱 Species Identification")
+    progress_bar_1 = st.progress(0)
+    progress_text_1 = st.empty()
 
-    with col_btn1:
-        if st.button("🔍 Saine ou Malade", use_container_width=True):
-            with st.spinner("Analyse en cours..."):
-                # Préparer le fichier pour l'API
-                uploaded_file.seek(0)
-                files = {"file": (uploaded_file.name, uploaded_file, uploaded_file.type)}
+    progress_text_1.text("Identifying plant species...")
 
-                try:
-                    response = requests.post(f"{API_URL}/predict/binary", files=files)
-                    response.raise_for_status()
-                    result = response.json()
+    uploaded_file.seek(0)
+    files = {"file": (uploaded_file.name, uploaded_file, uploaded_file.type)}
 
-                    with col2:
-                        st.subheader("📊 Résultats - Classification Binaire")
+    try:
+        response = requests.post(f"{API_URL}/predict/species", files=files)
+        response.raise_for_status()
+        species_result = response.json()
 
-                        # Afficher l'image annotée
-                        if "annotated_image" in result:
-                            img_data = base64.b64decode(result["annotated_image"].split(",")[1])
-                            img = Image.open(io.BytesIO(img_data))
-                            st.image(img, use_container_width=True)
+        if "annotated_image" in species_result:
+            img_data = base64.b64decode(species_result["annotated_image"].split(",")[1])
+            img = Image.open(io.BytesIO(img_data))
+            st.image(img, use_container_width=True)
 
-                        # Afficher les prédictions
-                        if result["predictions"]:
-                            for pred in result["predictions"]:
-                                st.success(f"**{pred['class_name']}** - Confiance: {pred['confidence']:.2%}")
-                        else:
-                            st.warning("Aucune détection")
+        if species_result["predictions"]:
+            progress_bar_1.progress(100)
+            progress_text_1.text("✅ Species identification complete!")
+        else:
+            st.warning("No species detected")
+            st.stop()
 
-                except Exception as e:
-                    st.error(f"Erreur: {str(e)}")
+    except Exception as e:
+        st.error(f"Error during species identification: {str(e)}")
+        st.stop()
 
-    with col_btn2:
-        if st.button("🌱 Identifier l'espèce", use_container_width=True):
-            with st.spinner("Analyse en cours..."):
-                uploaded_file.seek(0)
-                files = {"file": (uploaded_file.name, uploaded_file, uploaded_file.type)}
+    st.markdown("---")
 
-                try:
-                    response = requests.post(f"{API_URL}/predict/species", files=files)
-                    response.raise_for_status()
-                    result = response.json()
+    # Step 2: Binary Classification (Healthy or Diseased)
+    st.markdown("### Step 2: 🔍 Health Status Detection")
+    progress_bar_2 = st.progress(0)
+    progress_text_2 = st.empty()
 
-                    with col2:
-                        st.subheader("📊 Résultats - Identification d'espèce")
+    progress_text_2.text("Detecting if plant is healthy or diseased...")
 
-                        if "annotated_image" in result:
-                            img_data = base64.b64decode(result["annotated_image"].split(",")[1])
-                            img = Image.open(io.BytesIO(img_data))
-                            st.image(img, use_container_width=True)
+    uploaded_file.seek(0)
+    files = {"file": (uploaded_file.name, uploaded_file, uploaded_file.type)}
 
-                        if result["predictions"]:
-                            for pred in result["predictions"]:
-                                st.success(f"**{pred['class_name']}** - Confiance: {pred['confidence']:.2%}")
-                        else:
-                            st.warning("Aucune détection")
+    try:
+        response = requests.post(f"{API_URL}/predict/binary", files=files)
+        response.raise_for_status()
+        binary_result = response.json()
 
-                except Exception as e:
-                    st.error(f"Erreur: {str(e)}")
+        if binary_result["predictions"]:
+            is_diseased = False
+            for pred in binary_result["predictions"]:
+                class_name = pred['class_name']
 
-    with col_btn3:
-        if st.button("🦠 Diagnostiquer la maladie", use_container_width=True):
-            with st.spinner("Analyse en cours..."):
-                uploaded_file.seek(0)
-                files = {"file": (uploaded_file.name, uploaded_file, uploaded_file.type)}
+                if class_name.lower() == "disease":
+                    is_diseased = True
 
-                try:
-                    response = requests.post(f"{API_URL}/predict/diseases", files=files)
-                    response.raise_for_status()
-                    result = response.json()
+            # If healthy, stop here
+            if not is_diseased:
+                progress_bar_2.progress(100)
+                progress_text_2.text("✅ Health detection complete!")
+                st.success("✅ Your plant appears to be healthy! No further analysis needed.")
+                st.stop()
+            else:
+                progress_bar_2.progress(100)
+                progress_text_2.text("✅ Health detection complete - Disease detected!")
+        else:
+            st.warning("No health status detected")
+            st.stop()
 
-                    with col2:
-                        st.subheader("📊 Résultats - Diagnostic de maladie")
+    except Exception as e:
+        st.error(f"Error during health status detection: {str(e)}")
+        st.stop()
 
-                        if "annotated_image" in result:
-                            img_data = base64.b64decode(result["annotated_image"].split(",")[1])
-                            img = Image.open(io.BytesIO(img_data))
-                            st.image(img, use_container_width=True)
+    st.markdown("---")
 
-                        if result["predictions"]:
-                            for pred in result["predictions"]:
-                                st.success(f"**{pred['class_name']}** - Confiance: {pred['confidence']:.2%}")
-                        else:
-                            st.warning("Aucune détection")
+    # Step 3: Disease Diagnosis (only if diseased)
+    st.markdown("### Step 3: 🦠 Disease Diagnosis")
+    progress_bar_3 = st.progress(0)
+    progress_text_3 = st.empty()
 
-                except Exception as e:
-                    st.error(f"Erreur: {str(e)}")
+    progress_text_3.text("Diagnosing specific disease...")
+
+    uploaded_file.seek(0)
+    files = {"file": (uploaded_file.name, uploaded_file, uploaded_file.type)}
+
+    try:
+        response = requests.post(f"{API_URL}/predict/diseases", files=files)
+        response.raise_for_status()
+        disease_result = response.json()
+
+        if "annotated_image" in disease_result:
+            img_data = base64.b64decode(disease_result["annotated_image"].split(",")[1])
+            img = Image.open(io.BytesIO(img_data))
+            st.image(img, use_container_width=True)
+
+        if disease_result["predictions"]:
+            progress_bar_3.progress(100)
+            progress_text_3.text("✅ Disease diagnosis complete!")
+        else:
+            st.warning("No specific disease identified")
+            progress_bar_3.progress(100)
+            progress_text_3.text("✅ Analysis complete!")
+
+    except Exception as e:
+        st.error(f"Error during disease diagnosis: {str(e)}")
+        progress_bar_3.progress(100)
+        progress_text_3.text("⚠️ Analysis completed with errors")
 
 else:
-    st.info("👆 Veuillez télécharger une image pour commencer l'analyse")
+    st.info("👆 Please upload an image to start the automatic analysis")
 
 # Footer
 st.markdown("---")
 st.markdown("""
 <div style='text-align: center'>
-    <p>🔬 Basé sur le dataset PlantDoc avec 2,598 images annotées</p>
+    <p>🔬 Based on the PlantDoc dataset with 2,598 annotated images</p>
     <p>📄 <a href='https://arxiv.org/abs/1911.10317'>Paper: PlantDoc: A Dataset for Visual Plant Disease Detection</a></p>
 </div>
 """, unsafe_allow_html=True)
