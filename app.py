@@ -81,6 +81,7 @@ if uploaded_file is not None:
     # Step 1: Species Identification
     st.markdown("### Step 1: 🌱 Species Identification")
     progress_bar_1 = st.progress(0)
+    st.spinner("Identifying the species")
     progress_text_1 = st.empty()
 
     progress_text_1.text("Identifying plant species...")
