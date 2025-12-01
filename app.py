@@ -110,6 +110,8 @@ if uploaded_file is not None:
     # Step 2: Binary Classification (Healthy or Diseased)
     st.markdown("### Step 2: 🔍 Health Status Detection")
 
+    is_diseased = False
+
     with st.spinner("Detecting if plant is healthy or diseased..."):
 
         uploaded_file.seek(0)
@@ -121,27 +123,25 @@ if uploaded_file is not None:
             binary_result = response.json()
 
             if binary_result["predictions"]:
-                is_diseased = False
                 for pred in binary_result["predictions"]:
                     class_name = pred['class_name']
 
                     if class_name.lower() == "disease":
                         is_diseased = True
 
-                # If healthy, stop here
-                if not is_diseased:
-                    st.markdown("✅ Health detection complete!")
-                    st.success("✅ Your plant appears to be healthy! No further analysis needed.")
-                    st.stop()
-                else:
-                    st.markdown("✅ Health detection complete - Disease detected!")
-            else:
-                st.warning("No health status detected")
-                st.stop()
+                    else:
+                        st.warning("No health status detected")
+                        st.stop()
 
         except Exception as e:
             st.error(f"Error during health status detection: {str(e)}")
             st.stop()
+
+    if not is_diseased:
+        st.success("✅ Your plant appears to be healthy! No further analysis needed.")
+        st.stop()
+    else:
+        st.markdown("✅ Disease detected - proceeding to diagnosis...")
 
     st.markdown("---")
 
