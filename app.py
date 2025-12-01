@@ -204,17 +204,6 @@ if uploaded_file is not None:
                 if disease_result["predictions"]:
                     st.markdown("✅ Disease diagnosis complete!")
 
-                                        # Get AI treatment advice
-                    disease_name = disease_result["predictions"][0]['class_name']
-                    species_name = species_result["predictions"][0]['class_name'] if species_result["predictions"] else "Unknown"
-
-                    st.markdown("---")
-                    st.markdown("### 🤖 AI Treatment Recommendations")
-
-                    with st.spinner("Generating personalized advice..."):
-                        advice = get_treatment_advice(species_name, disease_name)
-                        st.markdown(advice)
-
                 else:
                     st.warning("No specific disease identified")
                     st.markdown("✅ Analysis complete!")
@@ -222,6 +211,18 @@ if uploaded_file is not None:
             except Exception as e:
                 st.error(f"Error during disease diagnosis: {str(e)}")
                 st.markdown("⚠️ Analysis completed with errors")
+
+    if disease_result["predictions"]:
+        # Get AI treatment advice
+        disease_name = disease_result["predictions"][0]['class_name']
+        species_name = species_result["predictions"][0]['class_name'] if species_result["predictions"] else "Unknown"
+
+        st.markdown("---")
+        st.markdown("### 🤖 AI Treatment Recommendations")
+
+        with st.spinner("Generating personalized advice..."):
+            advice = get_treatment_advice(species_name, disease_name)
+            st.markdown(advice)
 
 else:
         st.info("👆 Please upload an image to start the automatic analysis")
