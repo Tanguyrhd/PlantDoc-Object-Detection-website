@@ -80,7 +80,7 @@ if uploaded_file is not None:
     # Step 1: Species Identification
     st.markdown("### Step 1: 🌱 Species Identification")
 
-    species_found = True
+    species_found = False
 
     with st.spinner("Identifying the species"):
 
