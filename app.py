@@ -92,13 +92,13 @@ if uploaded_file is not None:
             response.raise_for_status()
             species_result = response.json()
 
-            if "annotated_image" in species_result:
+            if species_result["predictions"]:
+                species_found = True
+
+            # if "annotated_image" in species_result:
                 img_data = base64.b64decode(species_result["annotated_image"].split(",")[1])
                 img = Image.open(io.BytesIO(img_data))
                 st.image(img, use_container_width=True)
-
-            if species_result["predictions"]:
-                species_found = True
 
         except Exception as e:
             st.error(f"Error during species identification: {str(e)}")
