@@ -73,105 +73,109 @@ if uploaded_file is not None:
     image = Image.open(uploaded_file)
 
     st.subheader("🖼️ Original Image")
-    st.image(image, use_container_width=True)
+    col_img1, col_img2, col_img3 = st.columns([1, 2, 1])
+    with col_img2:
+        st.image(image, use_container_width=True)
 
     st.markdown("---")
+
+    col1, col2 = st.columns(2)
 
     # Step 1: Species Identification
-    st.markdown("### Step 1: 🌱 Species Identification")
+    with col1:
+        st.markdown("### Step 1: 🌱 Species Identification")
 
-    species_found = False
+        species_found = False
 
-    with st.spinner("Identifying the species"):
+        with st.spinner("Identifying the species"):
 
-        uploaded_file.seek(0)
-        files = {"file": (uploaded_file.name, uploaded_file, uploaded_file.type)}
+            uploaded_file.seek(0)
+            files = {"file": (uploaded_file.name, uploaded_file, uploaded_file.type)}
 
-        try:
-            response = requests.post(f"{API_URL}/predict/species", files=files)
-            response.raise_for_status()
-            species_result = response.json()
+            try:
+                response = requests.post(f"{API_URL}/predict/species", files=files)
+                response.raise_for_status()
+                species_result = response.json()
 
-            if species_result["predictions"]:
-                species_found = True
+                if species_result["predictions"]:
+                    species_found = True
 
-            # if "annotated_image" in species_result:
-                img_data = base64.b64decode(species_result["annotated_image"].split(",")[1])
-                img = Image.open(io.BytesIO(img_data))
-                st.image(img, use_container_width=True)
+                # if "annotated_image" in species_result:
+                    img_data = base64.b64decode(species_result["annotated_image"].split(",")[1])
+                    img = Image.open(io.BytesIO(img_data))
+                    st.image(img, use_container_width=True)
 
-        except Exception as e:
-            st.error(f"Error during species identification: {str(e)}")
+            except Exception as e:
+                st.error(f"Error during species identification: {str(e)}")
+                st.stop()
+
+        if not species_found:
+            st.warning("No species detected, are you sure that the species is in the 'supported species' list ?")
             st.stop()
-
-    if not species_found:
-        st.warning("No species detected, are you sure that the species is in the list in the sidebar ?")
-        st.stop()
-    else:
-        st.markdown("✅ Identification complete")
-
-    st.markdown("---")
+        else:
+            st.markdown("✅ Identification complete")
 
     # Step 2: Binary Classification (Healthy or Diseased)
-    st.markdown("### Step 2: 🔍 Health Status Detection")
+    with col2:
+        st.markdown("### Step 2: 🔍 Health Status Detection")
 
-    is_diseased = False
+        is_diseased = False
 
-    with st.spinner("Detecting if plant is healthy or diseased..."):
+        with st.spinner("Detecting if plant is healthy or diseased..."):
 
-        uploaded_file.seek(0)
-        files = {"file": (uploaded_file.name, uploaded_file, uploaded_file.type)}
+            uploaded_file.seek(0)
+            files = {"file": (uploaded_file.name, uploaded_file, uploaded_file.type)}
 
-        try:
-            response = requests.post(f"{API_URL}/predict/binary", files=files)
-            response.raise_for_status()
-            binary_result = response.json()
+            try:
+                response = requests.post(f"{API_URL}/predict/binary", files=files)
+                response.raise_for_status()
+                binary_result = response.json()
 
-            if binary_result["predictions"]:
-                for pred in binary_result["predictions"]:
-                    class_name = pred['class_name']
+                if binary_result["predictions"]:
+                    for pred in binary_result["predictions"]:
+                        class_name = pred['class_name']
 
-                    if class_name.lower() == "disease":
-                        is_diseased = True
+                        if class_name.lower() == "disease":
+                            is_diseased = True
 
-        except Exception as e:
-            st.error(f"Error during health status detection: {str(e)}")
+            except Exception as e:
+                st.error(f"Error during health status detection: {str(e)}")
+                st.stop()
+
+        if not is_diseased:
+            st.success("✅ Your plant appears to be healthy! No further analysis needed.")
             st.stop()
+        else:
+            st.markdown("✅ Disease detected - proceeding to diagnosis...")
 
-    if not is_diseased:
-        st.success("✅ Your plant appears to be healthy! No further analysis needed.")
-        st.stop()
-    else:
-        st.markdown("✅ Disease detected - proceeding to diagnosis...")
+        st.markdown("---")
 
-    st.markdown("---")
+        # Step 3: Disease Diagnosis (only if diseased)
+        st.markdown("### Step 3: 🦠 Disease Diagnosis")
+        with st.spinner("Diagnosing specific disease..."):
 
-    # Step 3: Disease Diagnosis (only if diseased)
-    st.markdown("### Step 3: 🦠 Disease Diagnosis")
-    with st.spinner("Diagnosing specific disease..."):
+            uploaded_file.seek(0)
+            files = {"file": (uploaded_file.name, uploaded_file, uploaded_file.type)}
 
-        uploaded_file.seek(0)
-        files = {"file": (uploaded_file.name, uploaded_file, uploaded_file.type)}
+            try:
+                response = requests.post(f"{API_URL}/predict/diseases", files=files)
+                response.raise_for_status()
+                disease_result = response.json()
 
-        try:
-            response = requests.post(f"{API_URL}/predict/diseases", files=files)
-            response.raise_for_status()
-            disease_result = response.json()
+                if "annotated_image" in disease_result:
+                    img_data = base64.b64decode(disease_result["annotated_image"].split(",")[1])
+                    img = Image.open(io.BytesIO(img_data))
+                    st.image(img, use_container_width=True)
 
-            if "annotated_image" in disease_result:
-                img_data = base64.b64decode(disease_result["annotated_image"].split(",")[1])
-                img = Image.open(io.BytesIO(img_data))
-                st.image(img, use_container_width=True)
+                if disease_result["predictions"]:
+                    st.markdown("✅ Disease diagnosis complete!")
+                else:
+                    st.warning("No specific disease identified")
+                    st.markdown("✅ Analysis complete!")
 
-            if disease_result["predictions"]:
-                st.markdown("✅ Disease diagnosis complete!")
-            else:
-                st.warning("No specific disease identified")
-                st.markdown("✅ Analysis complete!")
-
-        except Exception as e:
-            st.error(f"Error during disease diagnosis: {str(e)}")
-            st.markdown("⚠️ Analysis completed with errors")
+            except Exception as e:
+                st.error(f"Error during disease diagnosis: {str(e)}")
+                st.markdown("⚠️ Analysis completed with errors")
 
 else:
         st.info("👆 Please upload an image to start the automatic analysis")
