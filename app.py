@@ -37,16 +37,11 @@ with st.sidebar:
 
     st.subheader("🦠 Detected Diseases (27 classes)")
     diseases = [
-        "Apple rust leaf", "Apple Scab Leaf",
-        "Bell pepper leaf spot",
-        "Corn leaf blight", "Corn rust leaf", "Corn Gray leaf spot",
-        "Potato leaf early blight", "Potato leaf late blight",
-        "Tomato Early blight leaf", "Tomato leaf late blight",
-        "Tomato mold leaf", "Tomato leaf yellow virus",
-        "Tomato leaf mosaic virus", "Tomato leaf bacterial spot",
-        "Tomato Septoria leaf spot", "Tomato two spotted spider mites leaf",
-        "Squash Powdery mildew leaf",
-        "Grape leaf black rot"
+        "Rust leaf", "Scab Leaf",
+        "Leaf early blight", "Leaf late blight", "Leaf yellow virus",
+        "Leaf mosaic virus", "Leaf bacterial spot",
+        "Septoria leaf spot",
+        "Powdery mildew leaf",
     ]
     st.markdown("- " + "\n- ".join(diseases))
 
@@ -57,9 +52,22 @@ st.markdown("---")
 
 # Upload
 uploaded_file = st.file_uploader(
-    "📤 Choose a plant leaf image",
+    "📤 Choose a plant leaf image from the list of supported species",
     type=["jpg", "jpeg", "png"]
 )
+
+# Warm-up: Load models on first page load
+if 'models_warmed_up' not in st.session_state:
+    with st.spinner("🔥 Warming up models... This will make your first prediction faster!"):
+        try:
+            # Send a dummy request to wake up the API
+            # You can use a small dummy image or just ping the health endpoint if you have one
+            # Try to ping the API (adjust if you have a health check endpoint)
+            requests.get(f"{API_URL}/", timeout=30)
+            st.session_state.models_warmed_up = True
+        except:
+            # If warm-up fails, continue anyway
+            st.session_state.models_warmed_up = True
 
 if uploaded_file is not None:
     # Display original image
@@ -94,7 +102,7 @@ if uploaded_file is not None:
             progress_bar_1.progress(100)
             progress_text_1.text("✅ Species identification complete!")
         else:
-            st.warning("No species detected")
+            st.warning("No species detected, are you sure that the species is in the list in the sidebar ?")
             st.stop()
 
     except Exception as e:
