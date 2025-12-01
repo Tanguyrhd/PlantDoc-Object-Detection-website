@@ -129,10 +129,6 @@ if uploaded_file is not None:
                     if class_name.lower() == "disease":
                         is_diseased = True
 
-                    else:
-                        st.warning("No health status detected")
-                        st.stop()
-
         except Exception as e:
             st.error(f"Error during health status detection: {str(e)}")
             st.stop()
