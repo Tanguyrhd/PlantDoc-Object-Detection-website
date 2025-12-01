@@ -3,6 +3,7 @@ import requests
 from PIL import Image
 import io
 import base64
+import anthropic
 
 # Page config
 st.set_page_config(
@@ -13,6 +14,39 @@ st.set_page_config(
 
 # API URL
 API_URL = "https://plantdoc-api-645106012666.europe-west1.run.app"
+# Anthropic API Key (use Streamlit secrets in production)
+ANTHROPIC_API_KEY = st.secrets.get("ANTHROPIC_API_KEY", "")
+
+def get_treatment_advice(species_name, disease_name):
+    """Get treatment advice from Claude LLM"""
+    if not ANTHROPIC_API_KEY:
+        return "⚠️ AI assistant not configured. Please add your Anthropic API key."
+
+    try:
+        client = anthropic.Anthropic(api_key=ANTHROPIC_API_KEY)
+
+        message = client.messages.create(
+            model="claude-3-5-haiku-20241022",  # Model middle: intelligent et pas cher
+            max_tokens=1024,
+            messages=[
+                {
+                    "role": "user",
+                    "content": f"""You are a plant disease expert. A {species_name} plant has been diagnosed with: {disease_name}.
+                    Please provide:
+                    1. **What is this disease?** (brief description)
+                    2. **Main causes** (2-3 bullet points)
+                    3. **Treatment recommendations** (organic and chemical options)
+                    4. **Prevention tips** (how to avoid in the future)
+                    5. **Urgency level** (low/medium/high)
+
+                    Keep it concise, practical, and easy to understand for a home gardener."""
+                }])
+
+        return message.content[0].text
+
+    except Exception as e:
+        return f"⚠️ Error generating advice: {str(e)}"
+
 
 # Title
 st.title("🌿 Recognize and Detect Plant Diseases")
@@ -169,6 +203,18 @@ if uploaded_file is not None:
 
                 if disease_result["predictions"]:
                     st.markdown("✅ Disease diagnosis complete!")
+
+                                        # Get AI treatment advice
+                    disease_name = disease_result["predictions"][0]['class_name']
+                    species_name = species_result["predictions"][0]['class_name'] if species_result["predictions"] else "Unknown"
+
+                    st.markdown("---")
+                    st.markdown("### 🤖 AI Treatment Recommendations")
+
+                    with st.spinner("Generating personalized advice..."):
+                        advice = get_treatment_advice(species_name, disease_name)
+                        st.markdown(advice)
+
                 else:
                     st.warning("No specific disease identified")
                     st.markdown("✅ Analysis complete!")
