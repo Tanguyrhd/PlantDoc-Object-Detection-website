@@ -80,35 +80,32 @@ if uploaded_file is not None:
 
     # Step 1: Species Identification
     st.markdown("### Step 1: 🌱 Species Identification")
-    progress_bar_1 = st.progress(0)
-    st.spinner("Identifying the species")
-    progress_text_1 = st.empty()
 
-    progress_text_1.text("Identifying plant species...")
+    with st.spinner("Identifying the species"):
 
-    uploaded_file.seek(0)
-    files = {"file": (uploaded_file.name, uploaded_file, uploaded_file.type)}
+        uploaded_file.seek(0)
+        files = {"file": (uploaded_file.name, uploaded_file, uploaded_file.type)}
 
-    try:
-        response = requests.post(f"{API_URL}/predict/species", files=files)
-        response.raise_for_status()
-        species_result = response.json()
+        try:
+            response = requests.post(f"{API_URL}/predict/species", files=files)
+            response.raise_for_status()
+            species_result = response.json()
 
-        if "annotated_image" in species_result:
-            img_data = base64.b64decode(species_result["annotated_image"].split(",")[1])
-            img = Image.open(io.BytesIO(img_data))
-            st.image(img, use_container_width=True)
+            if "annotated_image" in species_result:
+                img_data = base64.b64decode(species_result["annotated_image"].split(",")[1])
+                img = Image.open(io.BytesIO(img_data))
+                st.image(img, use_container_width=True)
 
-        if species_result["predictions"]:
-            progress_bar_1.progress(100)
-            progress_text_1.text("✅ Species identification complete!")
-        else:
-            st.warning("No species detected, are you sure that the species is in the list in the sidebar ?")
+            if species_result["predictions"]:
+                progress_bar_1.progress(100)
+                progress_text_1.text("✅ Species identification complete!")
+            else:
+                st.warning("No species detected, are you sure that the species is in the list in the sidebar ?")
+                st.stop()
+
+        except Exception as e:
+            st.error(f"Error during species identification: {str(e)}")
             st.stop()
-
-    except Exception as e:
-        st.error(f"Error during species identification: {str(e)}")
-        st.stop()
 
     st.markdown("---")
 
