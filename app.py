@@ -58,16 +58,15 @@ uploaded_file = st.file_uploader(
 
 # Warm-up: Load models on first page load
 if 'models_warmed_up' not in st.session_state:
-    with st.spinner("🔥 Warming up models... This will make your first prediction faster!"):
-        try:
-            # Send a dummy request to wake up the API
-            # You can use a small dummy image or just ping the health endpoint if you have one
-            # Try to ping the API (adjust if you have a health check endpoint)
-            requests.get(f"{API_URL}/", timeout=30)
-            st.session_state.models_warmed_up = True
-        except:
-            # If warm-up fails, continue anyway
-            st.session_state.models_warmed_up = True
+    try:
+        # Send a dummy request to wake up the API
+        # You can use a small dummy image or just ping the health endpoint if you have one
+        # Try to ping the API (adjust if you have a health check endpoint)
+        requests.get(f"{API_URL}/", timeout=30)
+        st.session_state.models_warmed_up = True
+    except:
+        # If warm-up fails, continue anyway
+        st.session_state.models_warmed_up = True
 
 if uploaded_file is not None:
     # Display original image
@@ -110,81 +109,71 @@ if uploaded_file is not None:
 
     # Step 2: Binary Classification (Healthy or Diseased)
     st.markdown("### Step 2: 🔍 Health Status Detection")
-    progress_bar_2 = st.progress(0)
-    progress_text_2 = st.empty()
 
-    progress_text_2.text("Detecting if plant is healthy or diseased...")
+    with st.spinner("Detecting if plant is healthy or diseased..."):
 
-    uploaded_file.seek(0)
-    files = {"file": (uploaded_file.name, uploaded_file, uploaded_file.type)}
+        uploaded_file.seek(0)
+        files = {"file": (uploaded_file.name, uploaded_file, uploaded_file.type)}
 
-    try:
-        response = requests.post(f"{API_URL}/predict/binary", files=files)
-        response.raise_for_status()
-        binary_result = response.json()
+        try:
+            response = requests.post(f"{API_URL}/predict/binary", files=files)
+            response.raise_for_status()
+            binary_result = response.json()
 
-        if binary_result["predictions"]:
-            is_diseased = False
-            for pred in binary_result["predictions"]:
-                class_name = pred['class_name']
+            if binary_result["predictions"]:
+                is_diseased = False
+                for pred in binary_result["predictions"]:
+                    class_name = pred['class_name']
 
-                if class_name.lower() == "disease":
-                    is_diseased = True
+                    if class_name.lower() == "disease":
+                        is_diseased = True
 
-            # If healthy, stop here
-            if not is_diseased:
-                progress_bar_2.progress(100)
-                progress_text_2.text("✅ Health detection complete!")
-                st.success("✅ Your plant appears to be healthy! No further analysis needed.")
-                st.stop()
+                # If healthy, stop here
+                if not is_diseased:
+                    st.markdown("✅ Health detection complete!")
+                    st.success("✅ Your plant appears to be healthy! No further analysis needed.")
+                    st.stop()
+                else:
+                    st.markdown("✅ Health detection complete - Disease detected!")
             else:
-                progress_bar_2.progress(100)
-                progress_text_2.text("✅ Health detection complete - Disease detected!")
-        else:
-            st.warning("No health status detected")
-            st.stop()
+                st.warning("No health status detected")
+                st.stop()
 
-    except Exception as e:
-        st.error(f"Error during health status detection: {str(e)}")
-        st.stop()
+        except Exception as e:
+            st.error(f"Error during health status detection: {str(e)}")
+            st.stop()
 
     st.markdown("---")
 
     # Step 3: Disease Diagnosis (only if diseased)
     st.markdown("### Step 3: 🦠 Disease Diagnosis")
-    progress_bar_3 = st.progress(0)
-    progress_text_3 = st.empty()
+    with st.spinner("Diagnosing specific disease..."):
 
-    progress_text_3.text("Diagnosing specific disease...")
+        uploaded_file.seek(0)
+        files = {"file": (uploaded_file.name, uploaded_file, uploaded_file.type)}
 
-    uploaded_file.seek(0)
-    files = {"file": (uploaded_file.name, uploaded_file, uploaded_file.type)}
+        try:
+            response = requests.post(f"{API_URL}/predict/diseases", files=files)
+            response.raise_for_status()
+            disease_result = response.json()
 
-    try:
-        response = requests.post(f"{API_URL}/predict/diseases", files=files)
-        response.raise_for_status()
-        disease_result = response.json()
+            if "annotated_image" in disease_result:
+                img_data = base64.b64decode(disease_result["annotated_image"].split(",")[1])
+                img = Image.open(io.BytesIO(img_data))
+                st.image(img, use_container_width=True)
 
-        if "annotated_image" in disease_result:
-            img_data = base64.b64decode(disease_result["annotated_image"].split(",")[1])
-            img = Image.open(io.BytesIO(img_data))
-            st.image(img, use_container_width=True)
+            if disease_result["predictions"]:
+                st.markdown("✅ Disease diagnosis complete!")
+            else:
+                st.warning("No specific disease identified")
+                st.markdown("✅ Analysis complete!")
 
-        if disease_result["predictions"]:
-            progress_bar_3.progress(100)
-            progress_text_3.text("✅ Disease diagnosis complete!")
-        else:
-            st.warning("No specific disease identified")
-            progress_bar_3.progress(100)
-            progress_text_3.text("✅ Analysis complete!")
-
-    except Exception as e:
-        st.error(f"Error during disease diagnosis: {str(e)}")
-        progress_bar_3.progress(100)
-        progress_text_3.text("⚠️ Analysis completed with errors")
+        except Exception as e:
+            st.error(f"Error during disease diagnosis: {str(e)}")
+            st.markdown("⚠️ Analysis completed with errors")
 
 else:
-    st.info("👆 Please upload an image to start the automatic analysis")
+        st.info("👆 Please upload an image to start the automatic analysis")
 
 # Footer
 st.markdown("---")
