@@ -97,8 +97,7 @@ if uploaded_file is not None:
                 st.image(img, use_container_width=True)
 
             if species_result["predictions"]:
-                progress_bar_1.progress(100)
-                progress_text_1.text("✅ Species identification complete!")
+                st.markdown("Identification complete")
             else:
                 st.warning("No species detected, are you sure that the species is in the list in the sidebar ?")
                 st.stop()
