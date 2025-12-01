@@ -35,7 +35,7 @@ with st.sidebar:
     ]
     st.markdown("- " + "\n- ".join(species))
 
-    st.subheader("🦠 Detected Diseases (27 classes)")
+    st.subheader("🦠 Detected Possible Diseases")
     diseases = [
         "Rust leaf", "Scab Leaf",
         "Leaf early blight", "Leaf late blight", "Leaf yellow virus",
@@ -80,6 +80,8 @@ if uploaded_file is not None:
     # Step 1: Species Identification
     st.markdown("### Step 1: 🌱 Species Identification")
 
+    species_found = True
+
     with st.spinner("Identifying the species"):
 
         uploaded_file.seek(0)
@@ -96,14 +98,17 @@ if uploaded_file is not None:
                 st.image(img, use_container_width=True)
 
             if species_result["predictions"]:
-                st.markdown("Identification complete")
-            else:
-                st.warning("No species detected, are you sure that the species is in the list in the sidebar ?")
-                st.stop()
+                species_found = True
 
         except Exception as e:
             st.error(f"Error during species identification: {str(e)}")
             st.stop()
+
+    if not species_found:
+        st.warning("No species detected, are you sure that the species is in the list in the sidebar ?")
+        st.stop()
+    else:
+        st.markdown("✅ Identification complete")
 
     st.markdown("---")
 
